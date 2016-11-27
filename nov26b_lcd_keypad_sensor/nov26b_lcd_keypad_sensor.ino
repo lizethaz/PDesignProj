@@ -28,13 +28,11 @@ byte rowPins[numRows]= {5,4,3,2}; //Columns 0 to 3
 //initializes an instance of the Keypad class
 Keypad myKeypad= Keypad(makeKeymap(keymap), rowPins, colPins, numRows, numCols);
 
-
-
-
+int cont=0;
+char sign, decimal, unit;
 
 //sensor
-void setup() 
-{
+void setup() {
   Serial.begin(9600);
   
   //sensor
@@ -46,7 +44,7 @@ void setup()
   mySerial.write(0x7C);  
   mySerial.write(0x9D);  //backlight fully on  
   mySerial.write(0xFE);  
-  mySerial.write(0x0E);
+  mySerial.write(0x0D); //blink cursor
   delay(3000); 
 
  // Reading temperature or humidity takes about 250 milliseconds!
@@ -60,62 +58,108 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
-void loop() 
-{
+void loop() {
   char keypressed = myKeypad.getKey();
-
-  if (keypressed != NO_KEY)
- {
-    mySerial.print(keypressed);
-    
-    //Delete
-    if (keypressed=='A')
-    {
-      ClearLcd();
-      mySerial.print("Temperature:");
-      SecondLineLcd(); 
-      }  
+  
+  if (keypressed != NO_KEY){
+    switch (cont){
+      case 0:
+        if (keypressed == '+' || keypressed == '-'){          
+          sign=keypressed;
+          mySerial.print(keypressed);
+          cont++;
+          break;
+        }
+        else{
+          Invalid(); 
+          break;       
+        }
+        
+      case 1:
+        if (keypressed >= '0' && keypressed <= '9'){          
+          decimal=keypressed;
+          mySerial.print(keypressed);
+          cont++;
+          break;
+        }
+        else{
+          Invalid(); 
+          break;       
+        }
       
-    //Enter  
-    if (keypressed=='D')
-    {
-      digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-      delay(1000);                       // wait for a second
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
-      }
+       case 2:
+        if (keypressed >= '0' && keypressed <= '9'){          
+          unit=keypressed;
+          mySerial.print(keypressed);
+          cont++;
+          break;
+        }
+        else{
+          Invalid(); 
+          break;       
+        }
 
-    if (keypressed=='B' || keypressed=='C')
-    {
-      Invalid();
-      }  
-      
-    }   
-//    else
-//    mySerial.print(keypressed); 
+        //ENTER
+       case 3:
+        if (keypressed == 'A'){          
+         ClearLcd();
+         mySerial.print("Bachecito :D"); 
+         SecondLineLcd();
+         mySerial.print("Temp=");
+         mySerial.print(sign);
+         mySerial.print(decimal);
+         mySerial.print(unit);
+         mySerial.print("°C");
+         break;
+        }
+        else{
+          Invalid(); 
+          break;       
+        }
+
+         //Clear LCD
+       case 4:
+        if (keypressed == 'A'){          
+         ClearLcd();
+         break;
+        }
+        else{
+          Invalid(); 
+          break;       
+        }
+       default:
+       cont=0;
+       Invalid();
+     }
+  }   
 }
 
-//function clear LCD
+//Clear LCD
 void ClearLcd()
 {
   mySerial.write(0xFE);  
   mySerial.write(0x01); 
 }
 
-//function second line
+//Second Line LCD
 void SecondLineLcd()
 {
   mySerial.write(0xFE);  
   mySerial.write(0xC0);
 }
 
+//Invalid character
 void Invalid()
 {
   ClearLcd();
   mySerial.print("Invalid");
-  delay(1000); 
+  delay(2000); 
   ClearLcd();
+  mySerial.print("Enter sign and two digits");
+  delay(4000); 
+  ClearLcd();  
   mySerial.print("Temperature:");
   SecondLineLcd(); 
+  cont==0;
 }
 
-//Test
